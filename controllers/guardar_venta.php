@@ -1,7 +1,6 @@
 <?php
 require_once '../config/db.php';
 session_start();
-
 header('Content-Type: application/json');
 
 if (!isset($_SESSION['usuario'])) {
@@ -11,7 +10,6 @@ if (!isset($_SESSION['usuario'])) {
 
 $usuario = $_SESSION['usuario'];
 
-// Buscar ID del usuario en base al nombre de usuario de sesión
 $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE usuario = ?");
 $stmt->execute([$usuario]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -25,6 +23,7 @@ $usuario_id = $user['id'];
 
 $data = json_decode(file_get_contents('php://input'), true);
 $productos = $data['productos'] ?? [];
+$id_original = $data['id_venta_original'] ?? null;
 
 if (empty($productos)) {
   echo json_encode(['success' => false, 'message' => 'No hay productos para guardar']);
@@ -34,18 +33,34 @@ if (empty($productos)) {
 try {
   $pdo->beginTransaction();
 
-  // Calcular total de la venta
+  // Si viene una venta original, anularla y devolver stock
+  if ($id_original && is_numeric($id_original)) {
+    // Marcar como anulada
+    $pdo->prepare("UPDATE ventas SET anulada = 1 WHERE id = ?")->execute([$id_original]);
+
+    // Traer los productos y devolver al stock
+    $stmt = $pdo->prepare("SELECT producto_id, cantidad FROM detalle_venta WHERE venta_id = ?");
+    $stmt->execute([$id_original]);
+    $original_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($original_items as $item) {
+      $pdo->prepare("UPDATE productos SET unidades_totales = unidades_totales + ? WHERE id = ?")
+          ->execute([$item['cantidad'], $item['producto_id']]);
+    }
+  }
+
+  // Calcular total de la nueva venta
   $total = 0;
   foreach ($productos as $item) {
     $total += $item['precio'] * $item['cantidad'];
   }
 
-  // Insertar en tabla ventas
+  // Insertar nueva venta
   $stmt = $pdo->prepare("INSERT INTO ventas (usuario_id, total) VALUES (?, ?)");
   $stmt->execute([$usuario_id, $total]);
-  $venta_id = $pdo->lastInsertId();
+  $nueva_venta_id = $pdo->lastInsertId();
 
-  // Insertar en tabla detalle_venta
+  // Insertar detalle
   $stmt = $pdo->prepare("
     INSERT INTO detalle_venta 
     (venta_id, producto_id, nombre_producto, precio_unitario, cantidad, subtotal) 
@@ -55,7 +70,7 @@ try {
   foreach ($productos as $item) {
     $subtotal = $item['precio'] * $item['cantidad'];
     $stmt->execute([
-      $venta_id,
+      $nueva_venta_id,
       $item['id'],
       $item['descripcion'],
       $item['precio'],
@@ -63,12 +78,11 @@ try {
       $subtotal
     ]);
 
-    // Descontar del stock correcto
-    $stockUpdate = $pdo->prepare("UPDATE productos SET unidades_totales = unidades_totales - ? WHERE id = ?");
-    $stockUpdate->execute([$item['cantidad'], $item['id']]);
+    // Descontar del stock
+    $pdo->prepare("UPDATE productos SET unidades_totales = unidades_totales - ? WHERE id = ?")
+        ->execute([$item['cantidad'], $item['id']]);
   }
 
-  
   $pdo->commit();
   echo json_encode(['success' => true]);
 

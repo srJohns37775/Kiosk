@@ -8,8 +8,8 @@ if (!isset($_SESSION['usuario'])) {
 $usuario = $_SESSION['usuario'];
 $rol = $_SESSION['rol'];
 require_once '../config/db.php';
-// Consulta para obtener las ventas registradas
-$query_ventas = "SELECT v.id, v.fecha, v.total, u.nombre as usuario 
+// Consulta para obtener las ventas registradas inclusive las anuladas
+$query_ventas = "SELECT v.id, v.fecha, v.total, v.anulada, u.nombre as usuario 
                  FROM ventas v 
                  JOIN usuarios u ON v.usuario_id = u.id 
                  ORDER BY v.fecha DESC";
@@ -67,6 +67,7 @@ $ventas = $stmt_ventas->fetchAll(PDO::FETCH_ASSOC);
                       <th>Fecha</th>
                       <th>Total</th>
                       <th>Usuario</th>
+                      <th>Estado</th>
                       <th>Acciones</th>
                   </tr>
               </thead>
@@ -79,8 +80,20 @@ $ventas = $stmt_ventas->fetchAll(PDO::FETCH_ASSOC);
                               <td>$<?= number_format($venta['total'], 2, ',', '.') ?></td>
                               <td><?= htmlspecialchars($venta['usuario']) ?></td>
                               <td>
+                                <?php if ($venta['anulada']): ?>
+                                  <span class="badge bg-danger">Venta Anulada</span>
+                                <?php else: ?>
+                                  <span class="badge bg-success">Activa</span>
+                                <?php endif; ?>
+                              </td>
+                              <td>
                                   <button class="btn btn-sm btn-warning" onclick="editarVenta(<?= $venta['id'] ?>)">Editar</button>
-                                  <button class="btn btn-sm btn-danger" onclick="devolverStock(<?= $venta['id'] ?>)">Devolver Stock</button>
+                                  <!-- <button class="btn btn-sm btn-danger" onclick="devolverStock(<?= $venta['id'] ?>)">Devolver Stock</button> -->
+                                  <?php if (!$venta['anulada']): ?>
+                                    <button class="btn btn-sm btn-danger" onclick="devolverStock(<?= $venta['id'] ?>)">Anular Venta</button>
+                                  <?php else: ?>
+                                    <button class="btn btn-sm btn-secondary" disabled>Devuelto</button>
+                                  <?php endif; ?>
                               </td>
                           </tr>
                       <?php endforeach; ?>
@@ -272,7 +285,10 @@ document.getElementById('confirmar-venta').addEventListener('click', () => {
   fetch('../controllers/guardar_venta.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ productos: ventaDetalle })
+    body: JSON.stringify({
+      productos: ventaDetalle,
+      id_venta_original: document.getElementById('modalVenta').dataset.idVentaOriginal || null
+     })
   })
   .then(res => res.json())
   .then(data => {
@@ -295,28 +311,57 @@ function formatoPrecio(num) {
     maximumFractionDigits: 2
   }).format(num);
 }
+// funcion para traer la informacion de la venta
 function editarVenta(idVenta) {
-    Swal.fire({
-        title: 'Editar Venta',
-        text: '¿Deseas editar esta venta?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, editar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Aquí puedes implementar la lógica para editar la venta
-            // Por ejemplo, abrir un modal con los datos de la venta
-            console.log('Editar venta ID:', idVenta);
-            // fetch(`../controllers/obtener_venta.php?id=${idVenta}`)
-            //   .then(response => response.json())
-            //   .then(data => {
-            //       // Llenar el modal con los datos
-            //   });
-        }
+  fetch(`../controllers/obtener_venta.php?id=${idVenta}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        ventaDetalle = [];
+        document.getElementById('venta-form').reset();
+        document.getElementById('tabla-detalle').innerHTML = '';
+        document.getElementById('total').textContent = '0.00';
+
+        data.productos.forEach(prod => {
+          ventaDetalle.push({ id: prod.id, descripcion: prod.descripcion, cantidad: prod.cantidad, precio: parseFloat(prod.precio) });
+
+          const fila = document.createElement('tr');
+          fila.innerHTML = `
+            <td>${prod.descripcion}</td>
+            <td>${prod.cantidad}</td>
+            <td>$${formatoPrecio(prod.precio)}</td>
+            <td>$${formatoPrecio(prod.precio * prod.cantidad)}</td>
+            <td><button class="btn btn-sm btn-danger quitar">X</button></td>
+          `;
+          fila.querySelector('.quitar').addEventListener('click', () => {
+            fila.remove();
+            ventaDetalle = ventaDetalle.filter(p => !(p.id === prod.id && p.cantidad === prod.cantidad));
+            calcularTotal();
+          });
+
+          document.getElementById('tabla-detalle').appendChild(fila);
+        });
+
+        calcularTotal();
+
+        const modalEl = document.getElementById('modalVenta');
+        const modal = new bootstrap.Modal(modalEl, {
+          backdrop: 'static',
+          keyboard: true
+        });
+        modal.show();
+
+        // Guardar el ID original para anular luego
+        modalEl.dataset.idVentaOriginal = idVenta;
+      } else {
+        Swal.fire('Error', 'No se pudo obtener la venta', 'error');
+      }
+    })
+    .catch(() => {
+      Swal.fire('Error', 'Error al conectar con el servidor', 'error');
     });
 }
-//funcion para traer la informacion de venta
+
 // Versión mejorada con loader
 function devolverStock(idVenta) {
     if (!Number.isInteger(Number(idVenta))) {
