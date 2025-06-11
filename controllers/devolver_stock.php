@@ -22,7 +22,7 @@ try {
     $pdo->beginTransaction();
     
     // 1. Obtener los productos de la venta
-    $stmt = $pdo->prepare("SELECT producto_id, cantidad FROM ventas_detalle WHERE venta_id = ?");
+    $stmt = $pdo->prepare("SELECT producto_id, cantidad FROM detalle_venta WHERE venta_id = ?");
     $stmt->execute([$venta_id]);
     $productos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
@@ -32,7 +32,7 @@ try {
     
     // 2. Devolver cada producto al stock
     foreach ($productos as $producto) {
-        $update = $pdo->prepare("UPDATE productos SET stock = stock + ? WHERE id = ?");
+        $update = $pdo->prepare("UPDATE productos SET unidades_totales = unidades_totales + ? WHERE id = ?");
         $update->execute([$producto['cantidad'], $producto['producto_id']]);
     }
     
