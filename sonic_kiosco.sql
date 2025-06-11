@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 10-06-2025 a las 22:34:35
+-- Tiempo de generación: 11-06-2025 a las 23:35:34
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -74,7 +74,10 @@ INSERT INTO `detalle_venta` (`id`, `venta_id`, `producto_id`, `nombre_producto`,
 (5, 5, 1, 'Coca cola 2lts', 12264.00, 1, 12264.00),
 (6, 6, 1, 'Coca cola 2lts', 12264.00, 1, 12264.00),
 (7, 7, 1, 'Coca cola 2lts', 12264.00, 1, 12264.00),
-(8, 8, 4, 'Philips Morris x20', 4900.00, 10, 49000.00);
+(8, 8, 4, 'Philips Morris x20', 4900.00, 10, 49000.00),
+(9, 9, 1, 'Coca cola 2lts', 12264.00, 1, 12264.00),
+(10, 9, 4, 'Philips Morris x20', 4900.00, 1, 4900.00),
+(11, 10, 1, 'Coca cola 2lts', 12264.00, 1, 12264.00);
 
 -- --------------------------------------------------------
 
@@ -98,9 +101,9 @@ INSERT INTO `marcas` (`id`, `nombre`, `creado_en`) VALUES
 (4, 'Cocacola', '2025-06-04 20:12:55'),
 (5, 'Lays', '2025-06-04 20:13:01'),
 (6, 'Krachitos', '2025-06-04 20:13:12'),
-(7, 'Lucky Strike 12', '2025-06-10 17:48:20'),
-(8, 'Marlboro x20', '2025-06-10 17:48:28'),
-(9, 'Philip Morris x20', '2025-06-10 17:48:35');
+(7, 'Lucky Strike', '2025-06-10 17:48:20'),
+(8, 'Marlboro', '2025-06-10 17:48:28'),
+(9, 'Philip Morris', '2025-06-10 17:48:35');
 
 -- --------------------------------------------------------
 
@@ -133,7 +136,7 @@ INSERT INTO `productos` (`id`, `descripcion`, `categoria_id`, `marca_id`, `usa_p
 (1, 'Coca cola 2lts', 6, 4, 1, 10, 6, 55, 10, 8760.00, 40.00, 12264.00, NULL, '2025-06-05'),
 (2, 'Lays 250g', 4, 5, 0, 5, 30, 150, 20, 8600.00, 40.00, 12040.00, NULL, '2025-06-05'),
 (3, 'Krachitos 200g', 4, 6, 1, 30, 15, 450, 50, 5000.00, 40.00, 7000.00, NULL, '2025-06-05'),
-(4, 'Philips Morris x20', 12, 9, 1, 5, 10, 36, 20, 3500.00, 40.00, 4900.00, NULL, '2025-06-10');
+(4, 'Philips Morris x20', 12, 9, 1, 5, 10, 46, 20, 3500.00, 40.00, 4900.00, NULL, '2025-06-10');
 
 -- --------------------------------------------------------
 
@@ -170,22 +173,25 @@ CREATE TABLE `ventas` (
   `id` int(11) NOT NULL,
   `usuario_id` int(11) NOT NULL,
   `total` decimal(10,2) NOT NULL,
-  `fecha` timestamp NOT NULL DEFAULT current_timestamp()
+  `fecha` timestamp NOT NULL DEFAULT current_timestamp(),
+  `anulada` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `ventas`
 --
 
-INSERT INTO `ventas` (`id`, `usuario_id`, `total`, `fecha`) VALUES
-(1, 1, 9800.00, '2025-06-10 18:01:45'),
-(2, 1, 9800.00, '2025-06-10 18:01:48'),
-(3, 1, 12264.00, '2025-06-10 18:01:59'),
-(4, 1, 12264.00, '2025-06-10 18:02:11'),
-(5, 1, 12264.00, '2025-06-10 18:02:18'),
-(6, 1, 12264.00, '2025-06-10 18:05:16'),
-(7, 1, 12264.00, '2025-06-10 18:08:48'),
-(8, 1, 49000.00, '2025-06-10 19:23:00');
+INSERT INTO `ventas` (`id`, `usuario_id`, `total`, `fecha`, `anulada`) VALUES
+(1, 1, 9800.00, '2025-06-10 18:01:45', 0),
+(2, 1, 9800.00, '2025-06-10 18:01:48', 0),
+(3, 1, 12264.00, '2025-06-10 18:01:59', 0),
+(4, 1, 12264.00, '2025-06-10 18:02:11', 0),
+(5, 1, 12264.00, '2025-06-10 18:02:18', 0),
+(6, 1, 12264.00, '2025-06-10 18:05:16', 0),
+(7, 1, 12264.00, '2025-06-10 18:08:48', 1),
+(8, 1, 49000.00, '2025-06-10 19:23:00', 1),
+(9, 1, 17164.00, '2025-06-11 20:59:16', 1),
+(10, 1, 12264.00, '2025-06-11 20:59:54', 0);
 
 --
 -- Índices para tablas volcadas
@@ -247,7 +253,7 @@ ALTER TABLE `categorias`
 -- AUTO_INCREMENT de la tabla `detalle_venta`
 --
 ALTER TABLE `detalle_venta`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT de la tabla `marcas`
@@ -271,7 +277,7 @@ ALTER TABLE `usuarios`
 -- AUTO_INCREMENT de la tabla `ventas`
 --
 ALTER TABLE `ventas`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- Restricciones para tablas volcadas
