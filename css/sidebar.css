@@ -1,0 +1,21 @@
+.sidebar {
+  background-color: rgba(0, 0, 0, 0.6);
+  height: 100vh;
+  padding: 1rem;
+  color: white;
+}
+
+.sidebar .nav-link {
+  color: white;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+}
+
+.sidebar .nav-link.active {
+  background-color: #00a2ff22;
+  border-radius: 0.3rem;
+}
+
+.sidebar .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
