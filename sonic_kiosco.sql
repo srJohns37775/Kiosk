@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 11-06-2025 a las 23:35:34
+-- Tiempo de generación: 12-06-2025 a las 21:35:13
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -62,22 +62,23 @@ CREATE TABLE `detalle_venta` (
   `subtotal` decimal(10,2) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- --------------------------------------------------------
+
 --
--- Volcado de datos para la tabla `detalle_venta`
+-- Estructura de tabla para la tabla `ingresos_stock`
 --
 
-INSERT INTO `detalle_venta` (`id`, `venta_id`, `producto_id`, `nombre_producto`, `precio_unitario`, `cantidad`, `subtotal`) VALUES
-(1, 1, 4, 'Philips Morris x20', 4900.00, 2, 9800.00),
-(2, 2, 4, 'Philips Morris x20', 4900.00, 2, 9800.00),
-(3, 3, 1, 'Coca cola 2lts', 12264.00, 1, 12264.00),
-(4, 4, 1, 'Coca cola 2lts', 12264.00, 1, 12264.00),
-(5, 5, 1, 'Coca cola 2lts', 12264.00, 1, 12264.00),
-(6, 6, 1, 'Coca cola 2lts', 12264.00, 1, 12264.00),
-(7, 7, 1, 'Coca cola 2lts', 12264.00, 1, 12264.00),
-(8, 8, 4, 'Philips Morris x20', 4900.00, 10, 49000.00),
-(9, 9, 1, 'Coca cola 2lts', 12264.00, 1, 12264.00),
-(10, 9, 4, 'Philips Morris x20', 4900.00, 1, 4900.00),
-(11, 10, 1, 'Coca cola 2lts', 12264.00, 1, 12264.00);
+CREATE TABLE `ingresos_stock` (
+  `id` int(11) NOT NULL,
+  `producto_id` int(11) NOT NULL,
+  `cantidad_total` int(11) NOT NULL,
+  `cantidad_disponible` int(11) NOT NULL,
+  `precio_costo` decimal(10,2) NOT NULL,
+  `numero_boleta` varchar(50) DEFAULT NULL,
+  `proveedor` varchar(100) DEFAULT NULL,
+  `fecha_ingreso` datetime DEFAULT current_timestamp(),
+  `fecha_vencimiento` date DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -117,26 +118,9 @@ CREATE TABLE `productos` (
   `categoria_id` int(11) NOT NULL,
   `marca_id` int(11) NOT NULL,
   `usa_pack` tinyint(1) NOT NULL DEFAULT 0,
-  `cantidad_packs` int(11) DEFAULT NULL,
-  `unidades_por_pack` int(11) DEFAULT NULL,
-  `unidades_totales` int(11) NOT NULL,
   `stock_minimo` int(11) NOT NULL,
-  `precio_costo` decimal(10,2) NOT NULL,
-  `markup` decimal(5,2) NOT NULL,
-  `precio_venta` decimal(10,2) NOT NULL,
-  `fecha_vencimiento` date DEFAULT NULL,
   `fecha_registro` date NOT NULL DEFAULT curdate()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Volcado de datos para la tabla `productos`
---
-
-INSERT INTO `productos` (`id`, `descripcion`, `categoria_id`, `marca_id`, `usa_pack`, `cantidad_packs`, `unidades_por_pack`, `unidades_totales`, `stock_minimo`, `precio_costo`, `markup`, `precio_venta`, `fecha_vencimiento`, `fecha_registro`) VALUES
-(1, 'Coca cola 2lts', 6, 4, 1, 10, 6, 55, 10, 8760.00, 40.00, 12264.00, NULL, '2025-06-05'),
-(2, 'Lays 250g', 4, 5, 0, 5, 30, 150, 20, 8600.00, 40.00, 12040.00, NULL, '2025-06-05'),
-(3, 'Krachitos 200g', 4, 6, 1, 30, 15, 450, 50, 5000.00, 40.00, 7000.00, NULL, '2025-06-05'),
-(4, 'Philips Morris x20', 12, 9, 1, 5, 10, 46, 20, 3500.00, 40.00, 4900.00, NULL, '2025-06-10');
 
 -- --------------------------------------------------------
 
@@ -178,22 +162,6 @@ CREATE TABLE `ventas` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Volcado de datos para la tabla `ventas`
---
-
-INSERT INTO `ventas` (`id`, `usuario_id`, `total`, `fecha`, `anulada`) VALUES
-(1, 1, 9800.00, '2025-06-10 18:01:45', 0),
-(2, 1, 9800.00, '2025-06-10 18:01:48', 0),
-(3, 1, 12264.00, '2025-06-10 18:01:59', 0),
-(4, 1, 12264.00, '2025-06-10 18:02:11', 0),
-(5, 1, 12264.00, '2025-06-10 18:02:18', 0),
-(6, 1, 12264.00, '2025-06-10 18:05:16', 0),
-(7, 1, 12264.00, '2025-06-10 18:08:48', 1),
-(8, 1, 49000.00, '2025-06-10 19:23:00', 1),
-(9, 1, 17164.00, '2025-06-11 20:59:16', 1),
-(10, 1, 12264.00, '2025-06-11 20:59:54', 0);
-
---
 -- Índices para tablas volcadas
 --
 
@@ -209,6 +177,13 @@ ALTER TABLE `categorias`
 ALTER TABLE `detalle_venta`
   ADD PRIMARY KEY (`id`),
   ADD KEY `venta_id` (`venta_id`),
+  ADD KEY `producto_id` (`producto_id`);
+
+--
+-- Indices de la tabla `ingresos_stock`
+--
+ALTER TABLE `ingresos_stock`
+  ADD PRIMARY KEY (`id`),
   ADD KEY `producto_id` (`producto_id`);
 
 --
@@ -256,6 +231,12 @@ ALTER TABLE `detalle_venta`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
+-- AUTO_INCREMENT de la tabla `ingresos_stock`
+--
+ALTER TABLE `ingresos_stock`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de la tabla `marcas`
 --
 ALTER TABLE `marcas`
@@ -289,6 +270,12 @@ ALTER TABLE `ventas`
 ALTER TABLE `detalle_venta`
   ADD CONSTRAINT `detalle_venta_ibfk_1` FOREIGN KEY (`venta_id`) REFERENCES `ventas` (`id`),
   ADD CONSTRAINT `detalle_venta_ibfk_2` FOREIGN KEY (`producto_id`) REFERENCES `productos` (`id`);
+
+--
+-- Filtros para la tabla `ingresos_stock`
+--
+ALTER TABLE `ingresos_stock`
+  ADD CONSTRAINT `ingresos_stock_ibfk_1` FOREIGN KEY (`producto_id`) REFERENCES `productos` (`id`);
 
 --
 -- Filtros para la tabla `productos`

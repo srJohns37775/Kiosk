@@ -56,77 +56,9 @@ $rol = $_SESSION['rol'];
   </main>
 </div>
 
-<!-- hay que envolverlo en un condicional php por el rol de usuario -->
-<?php if ($rol === 'admin'): ?> 
-<!-- Modal Producto -->
-  <div class="modal fade" id="modalProducto" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content bg-dark text-white">
-        <div class="modal-header border-0">
-          <h5 class="modal-title" id="modalProductoTitle">Agregar Producto</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <form id="formProducto" class="modal-body">
-          <input type="hidden" name="id" id="productoId">
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Descripción</label>
-              <input type="text" name="descripcion" class="form-control" required>
-            </div>
-            <div class="col-md-3 mb-3">
-              <label class="form-label">Categoría</label>
-              <select name="categoria_id" class="form-select" required></select>
-            </div>
-            <div class="col-md-3 mb-3">
-              <label class="form-label">Marca</label>
-              <select name="marca_id" class="form-select" required></select>
-            </div>
-            <div class="col-md-12 mb-3 form-check">
-              <input type="checkbox" class="form-check-input" id="esPack" name="es_pack">
-              <label class="form-check-label" for="esPack">¿Viene en pack/caja?</label>
-            </div>
-            <div id="packFields" class="row d-none">
-              <div class="col-md-6 mb-3">
-                <label class="form-label">Cantidad de Packs</label>
-                <input type="number" min="1" name="cantidad_packs" class="form-control">
-              </div>
-              <div class="col-md-6 mb-3">
-                <label class="form-label">Unidades por Pack</label>
-                <input type="number" min="1" name="unidades_pack" class="form-control">
-              </div>
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Unidades (si no es pack)</label>
-              <input type="number" min="1" name="unidades" class="form-control">
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Stock mínimo</label>
-              <input type="number" min="0" name="stock_minimo" class="form-control">
-            </div>
-            <div class="col-md-4 mb-3">
-              <label class="form-label">Precio Costo Unidad</label>
-              <input type="number" step="0.01" min="0" name="precio_costo" class="form-control" required>
-            </div>
-            <div class="col-md-4 mb-3">
-              <label class="form-label">% Ganancia (markup)</label>
-              <input type="number" step="0.01" min="0" name="markup" class="form-control" required>
-            </div>
-            <div class="col-md-4 mb-3">
-              <label class="form-label">Precio Venta</label>
-              <input type="number" step="0.01" min="0" name="precio_venta" class="form-control" readonly>
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Fecha de Vencimiento (opcional)</label>
-              <input type="date" name="fecha_vencimiento" class="form-control">
-            </div>
-          </div>
-          <div class="text-end">
-            <button type="submit" class="btn btn-success">Guardar Producto</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
+<?php if ($rol === 'admin'): ?>
+  <?php include '../modales/modal_producto.php'; ?>
+  <?php include '../modales/modal_ingreso_stock.php'; ?>
 <?php endif; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -290,6 +222,8 @@ $rol = $_SESSION['rol'];
               ${'<?= $rol ?>' === 'admin' ? `
                 <button class="btn btn-sm btn-warning" onclick='editarProducto(${JSON.stringify(prod)})'>✏️</button>
                 <button class="btn btn-sm btn-danger" onclick="eliminarProducto(${prod.id})">🗑️</button>
+                <button class="btn btn-sm btn-info" onclick="abrirModalIngreso(${prod.id}, '${prod.descripcion}')">📥 Ingreso</button>
+
               ` : ''}
             </div>
           `;
@@ -335,12 +269,10 @@ $rol = $_SESSION['rol'];
       formProducto.fecha_vencimiento.value = prod.fecha_vencimiento;
     }
 
-    // Si es pack
+    // Pack: solo activa el checkbox, no intenta cargar campos que ya no existen
     if (prod.usa_pack === "1" || prod.usa_pack === 1) {
       document.getElementById('esPack').checked = true;
       document.getElementById('packFields').classList.remove('d-none');
-      formProducto.cantidad_packs.value = prod.cantidad_packs || '';
-      formProducto.unidades_pack.value = prod.unidades_por_pack || '';
       formProducto.unidades.readOnly = true;
     } else {
       document.getElementById('esPack').checked = false;
@@ -378,36 +310,85 @@ $rol = $_SESSION['rol'];
     });
   }
   function renderizarProductos(listaFiltrada) {
-    const lista = document.getElementById('lista-productos');
-    lista.innerHTML = '';
+      const lista = document.getElementById('lista-productos');
+      lista.innerHTML = '';
 
-    if (listaFiltrada.length === 0) {
-      lista.innerHTML = '<li class="list-group-item bg-dark text-warning">No se encontraron productos</li>';
-      return;
-    }
+      if (!Array.isArray(listaFiltrada)) {
+          lista.innerHTML = '<li class="list-group-item bg-dark text-danger">Error: datos inválidos</li>';
+          console.error("La lista recibida no es un array:", listaFiltrada);
+          return;
+      }
 
-    listaFiltrada.forEach(prod => {
-      const li = document.createElement('li');
-      li.className = 'list-group-item bg-dark text-white d-flex justify-content-between align-items-center';
+      if (listaFiltrada.length === 0) {
+          lista.innerHTML = '<li class="list-group-item bg-dark text-warning">No se encontraron productos</li>';
+          return;
+      }
 
-      li.innerHTML = `
-        <div>
-          <strong>${prod.descripcion}</strong><br>
-          <small>${prod.categoria} | ${prod.marca}</small><br>
-          <small>Stock: ${prod.unidades_totales}</small>
-        </div>
-        <div class="d-flex align-items-center gap-2">
-          <span class="badge bg-success">$${parseFloat(prod.precio_venta).toFixed(2)}</span>
-          ${'<?= $rol ?>' === 'admin' ? `
-            <button class="btn btn-sm btn-warning" onclick='editarProducto(${JSON.stringify(prod)})'>✏️</button>
-            <button class="btn btn-sm btn-danger" onclick="eliminarProducto(${prod.id})">🗑️</button>
-          ` : ''}
-        </div>
-      `;
+      listaFiltrada.forEach(prod => {
+          const li = document.createElement('li');
+          li.className = 'list-group-item bg-dark text-white d-flex justify-content-between align-items-center';
 
-      lista.appendChild(li);
-    });
+          // Mostrar precio de costo más reciente y stock total
+          li.innerHTML = `
+              <div>
+                  <strong>${prod.descripcion}</strong><br>
+                  <small>${prod.categoria} | ${prod.marca}</small><br>
+                  <small>Stock: ${prod.unidades_totales} | Costo: $${prod.precio_costo?.toFixed(2) || '0.00'}</small>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                  <span class="badge bg-success">$${prod.precio_venta?.toFixed(2) || '0.00'}</span>
+                  ${'<?= $rol ?>' === 'admin' ? `
+                      <button class="btn btn-sm btn-warning" onclick='editarProducto(${JSON.stringify(prod)})'>✏️</button>
+                      <button class="btn btn-sm btn-danger" onclick="eliminarProducto(${prod.id})">🗑️</button>
+                      <button class="btn btn-sm btn-info" onclick="abrirModalIngreso(${prod.id}, '${prod.descripcion}')">📥 Ingreso</button>
+                  ` : ''}
+              </div>
+          `;
+          lista.appendChild(li);
+      });
   }
+  function abrirModalIngreso(id, descripcion) {
+      document.getElementById('formIngresoStock').reset();
+      document.getElementById('producto_id_ingreso').value = id;
+      document.getElementById('descripcionProductoSeleccionado').textContent = descripcion;
+      const modal = new bootstrap.Modal(document.getElementById('modalIngresoStock'));
+      modal.show();
+    }
+    function cargarSelectProductos() {
+    const select = document.getElementById('producto_id_ingreso');
+    if (!select) return;
+
+    fetch('../controllers/get_productos_basicos.php')
+      .then(res => res.json())
+      .then(data => {
+        select.innerHTML = '<option value="">Seleccione un producto</option>';
+        data.forEach(prod => {
+          const option = document.createElement('option');
+          option.value = prod.id;
+          option.textContent = prod.descripcion;
+          select.appendChild(option);
+        });
+      })
+      .catch(err => {
+        console.error("Error al cargar productos:", err);
+      });
+  }
+
+  // Ejecutar al cargar DOM
+  document.addEventListener('DOMContentLoaded', cargarSelectProductos);
+
+    document.getElementById('producto_id_ingreso').addEventListener('change', function () {
+    const id = this.value;
+    if (!id) return;
+
+    // Buscar si el producto usa pack
+    const prod = productosData.find(p => p.id == id);
+    if (prod && prod.usa_pack == 1) {
+      document.getElementById('packIngresoFields').style.display = 'flex';
+    } else {
+      document.getElementById('packIngresoFields').style.display = 'none';
+    }
+  });
 
 
 
