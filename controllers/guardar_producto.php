@@ -9,6 +9,7 @@ try {
   $marca_id = intval($_POST['marca_id'] ?? 0);
   $usa_pack = isset($_POST['es_pack']) ? 1 : 0;
   $stock_minimo = intval($_POST['stock_minimo'] ?? 0);
+  $markup = floatval($_POST['markup'] ?? 0);  // ✅ Nuevo campo
 
   if ($descripcion === '' || $categoria_id === 0 || $marca_id === 0) {
     throw new Exception("Faltan datos obligatorios.");
@@ -21,7 +22,8 @@ try {
               categoria_id = :categoria_id,
               marca_id = :marca_id,
               usa_pack = :usa_pack,
-              stock_minimo = :stock_minimo
+              stock_minimo = :stock_minimo,
+              markup = :markup
             WHERE id = :id";
 
     $stmt = $pdo->prepare($sql);
@@ -31,6 +33,7 @@ try {
       ':marca_id' => $marca_id,
       ':usa_pack' => $usa_pack,
       ':stock_minimo' => $stock_minimo,
+      ':markup' => $markup,
       ':id' => $id
     ]);
 
@@ -38,9 +41,9 @@ try {
   } else {
     // INSERT
     $sql = "INSERT INTO productos (
-              descripcion, categoria_id, marca_id, usa_pack, stock_minimo
+              descripcion, categoria_id, marca_id, usa_pack, stock_minimo, markup
             ) VALUES (
-              :descripcion, :categoria_id, :marca_id, :usa_pack, :stock_minimo
+              :descripcion, :categoria_id, :marca_id, :usa_pack, :stock_minimo, :markup
             )";
 
     $stmt = $pdo->prepare($sql);
@@ -49,7 +52,8 @@ try {
       ':categoria_id' => $categoria_id,
       ':marca_id' => $marca_id,
       ':usa_pack' => $usa_pack,
-      ':stock_minimo' => $stock_minimo
+      ':stock_minimo' => $stock_minimo,
+      ':markup' => $markup
     ]);
 
     echo json_encode(['success' => true, 'mensaje' => 'Producto guardado correctamente']);

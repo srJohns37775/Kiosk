@@ -110,11 +110,21 @@ $rol = $_SESSION['rol'];
     const precioCostoInput = document.querySelector('[name="precio_costo"]');
     const markupInput = document.querySelector('[name="markup"]');
     const precioVentaInput = document.querySelector('[name="precio_venta"]');
+
+    // MODAL PRODUCTO
     const esPackCheckbox = document.getElementById('esPack');
     const packFields = document.getElementById('packFields');
     const unidadesInput = document.querySelector('[name="unidades"]');
     const cantidadPacksInput = document.querySelector('[name="cantidad_packs"]');
     const unidadesPackInput = document.querySelector('[name="unidades_pack"]');
+
+    // MODAL INGRESO STOCK
+    const esPackIngresoCheckbox = document.getElementById('esPackIngreso');
+    const packIngresoFields = document.getElementById('packIngresoFields');
+    const cantidadPacksIngreso = document.querySelector('#packIngresoFields [name="cantidad_packs"]');
+    const unidadesPackIngreso = document.querySelector('#packIngresoFields [name="unidades_pack"]');
+    const cantidadFinal = document.querySelector('[name="cantidad"]');
+
     cargarProductos();
 
     if (categoriaSelect && marcaSelect) {
@@ -157,7 +167,33 @@ $rol = $_SESSION['rol'];
       cantidadPacksInput.addEventListener('input', actualizarUnidades);
       unidadesPackInput.addEventListener('input', actualizarUnidades);
     }
+
+    // 🔁 Lógica ingreso con packs
+    function actualizarCantidadPorPack() {
+      const packs = parseInt(cantidadPacksIngreso.value) || 0;
+      const unidades = parseInt(unidadesPackIngreso.value) || 0;
+      const total = packs * unidades;
+      if (cantidadFinal) cantidadFinal.value = total > 0 ? total : '';
+    }
+
+    if (esPackIngresoCheckbox && packIngresoFields) {
+      esPackIngresoCheckbox.addEventListener('change', () => {
+        if (esPackIngresoCheckbox.checked) {
+          packIngresoFields.style.display = 'flex';
+          actualizarCantidadPorPack();
+        } else {
+          packIngresoFields.style.display = 'none';
+          cantidadPacksIngreso.value = '';
+          unidadesPackIngreso.value = '';
+          cantidadFinal.value = '';
+        }
+      });
+
+      cantidadPacksIngreso.addEventListener('input', actualizarCantidadPorPack);
+      unidadesPackIngreso.addEventListener('input', actualizarCantidadPorPack);
+    }
   });
+
   //Formulario AJAX
   const formProducto = document.getElementById('formProducto');
 
@@ -349,11 +385,33 @@ $rol = $_SESSION['rol'];
   }
   function abrirModalIngreso(id, descripcion) {
       document.getElementById('formIngresoStock').reset();
-      document.getElementById('producto_id_ingreso').value = id;
-      document.getElementById('descripcionProductoSeleccionado').textContent = descripcion;
+
+      // Setear valores en el modal
+      const productoInput = document.getElementById('producto_id_ingreso');
+      const descripcionInput = document.getElementById('descripcionProductoSeleccionado');
+
+      productoInput.value = id;
+      descripcionInput.value = descripcion;
+      descripcionInput.textContent = descripcion;
+
+      // Mostrar campos pack si corresponde
+      const prod = productosData.find(p => p.id == id);
+      const usaPack = prod && prod.usa_pack == 1;
+
+      document.getElementById('esPackIngreso').checked = false;
+      const packFields = document.getElementById('packIngresoFields');
+      if (usaPack) {
+        document.getElementById('esPackIngreso').parentElement.style.display = 'block';
+      } else {
+        document.getElementById('esPackIngreso').parentElement.style.display = 'none';
+        packFields.style.display = 'none';
+      }
+
+      // Mostrar modal
       const modal = new bootstrap.Modal(document.getElementById('modalIngresoStock'));
       modal.show();
     }
+
     function cargarSelectProductos() {
     const select = document.getElementById('producto_id_ingreso');
     if (!select) return;
