@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 12-06-2025 a las 21:35:13
+-- Tiempo de generación: 14-06-2025 a las 22:50:22
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -77,7 +77,9 @@ CREATE TABLE `ingresos_stock` (
   `numero_boleta` varchar(50) DEFAULT NULL,
   `proveedor` varchar(100) DEFAULT NULL,
   `fecha_ingreso` datetime DEFAULT current_timestamp(),
-  `fecha_vencimiento` date DEFAULT NULL
+  `fecha_vencimiento` date DEFAULT NULL,
+  `cantidad_packs` int(11) DEFAULT NULL,
+  `unidades_pack` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -119,8 +121,17 @@ CREATE TABLE `productos` (
   `marca_id` int(11) NOT NULL,
   `usa_pack` tinyint(1) NOT NULL DEFAULT 0,
   `stock_minimo` int(11) NOT NULL,
-  `fecha_registro` date NOT NULL DEFAULT curdate()
+  `fecha_registro` date NOT NULL DEFAULT curdate(),
+  `markup` decimal(5,2) NOT NULL DEFAULT 30.00
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Volcado de datos para la tabla `productos`
+--
+
+INSERT INTO `productos` (`id`, `descripcion`, `categoria_id`, `marca_id`, `usa_pack`, `stock_minimo`, `fecha_registro`, `markup`) VALUES
+(5, 'Coca cola 2lts', 6, 4, 1, 0, '2025-06-12', 30.00),
+(6, 'Lays 250gr', 4, 5, 0, 0, '2025-06-12', 30.00);
 
 -- --------------------------------------------------------
 
@@ -246,7 +257,7 @@ ALTER TABLE `marcas`
 -- AUTO_INCREMENT de la tabla `productos`
 --
 ALTER TABLE `productos`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT de la tabla `usuarios`
