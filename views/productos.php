@@ -59,6 +59,8 @@ $rol = $_SESSION['rol'];
 <?php if ($rol === 'admin'): ?>
   <?php include '../modales/modal_producto.php'; ?>
   <?php include '../modales/modal_ingreso_stock.php'; ?>
+  <?php include '../modales/modal_editar_ingresos.php'; ?>
+  <?php include '../modales/modalEditarIngresoStock.php'; ?>
 <?php endif; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -223,6 +225,36 @@ $rol = $_SESSION['rol'];
         Swal.fire('Error', 'Hubo un problema al guardar', 'error');
       });
   });
+
+  const formIngresoStock = document.getElementById('formIngresoStock');
+
+  formIngresoStock.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const formData = new FormData(formIngresoStock);
+
+    fetch('../controllers/guardar_ingreso_stock.php', {
+      method: 'POST',
+      body: formData
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          Swal.fire('¡Ingreso registrado!', data.mensaje, 'success');
+          const modal = bootstrap.Modal.getInstance(document.getElementById('modalIngresoStock'));
+          if (modal) modal.hide();
+          formIngresoStock.reset();
+          cargarProductos();
+        } else {
+          Swal.fire('Error', data.mensaje || 'No se pudo registrar el ingreso', 'error');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        Swal.fire('Error', 'Hubo un problema al guardar', 'error');
+      });
+  });
+
   //Cargar los productos por AJAX
   function cargarProductos() {
     fetch('../controllers/listar_productos.php')
@@ -251,7 +283,10 @@ $rol = $_SESSION['rol'];
             <div>
               <strong>${prod.descripcion}</strong><br>
               <small>${prod.categoria} | ${prod.marca}</small><br>
-              <small>Stock: ${prod.unidades_totales}</small>
+              <small>Stock: ${prod.unidades_totales} 
+              ${prod.stock_minimo && prod.unidades_totales < prod.stock_minimo ? `<span class="text-danger">(bajo)</span>` : ''}
+              </small>
+              <small>Min: ${prod.stock_minimo}</small>
             </div>
             <div class="d-flex align-items-center gap-2">
               <span class="badge bg-success">$${parseFloat(prod.precio_venta).toFixed(2)}</span>
@@ -259,6 +294,7 @@ $rol = $_SESSION['rol'];
                 <button class="btn btn-sm btn-warning" onclick='editarProducto(${JSON.stringify(prod)})'>✏️</button>
                 <button class="btn btn-sm btn-danger" onclick="eliminarProducto(${prod.id})">🗑️</button>
                 <button class="btn btn-sm btn-info" onclick="abrirModalIngreso(${prod.id}, '${prod.descripcion}')">📥 Ingreso</button>
+                <button class="btn btn-sm btn-secondary" onclick="mostrarIngresos(${prod.id}, '${prod.descripcion}')">🧾 Ver Ingresos</button>
 
               ` : ''}
             </div>
@@ -300,10 +336,6 @@ $rol = $_SESSION['rol'];
     formProducto.precio_costo.value = prod.precio_costo;
     formProducto.markup.value = prod.markup;
     formProducto.precio_venta.value = prod.precio_venta;
-
-    if (prod.fecha_vencimiento) {
-      formProducto.fecha_vencimiento.value = prod.fecha_vencimiento;
-    }
 
     // Pack: solo activa el checkbox, no intenta cargar campos que ya no existen
     if (prod.usa_pack === "1" || prod.usa_pack === 1) {
@@ -369,10 +401,11 @@ $rol = $_SESSION['rol'];
               <div>
                   <strong>${prod.descripcion}</strong><br>
                   <small>${prod.categoria} | ${prod.marca}</small><br>
-                  <small>Stock: ${prod.unidades_totales} | Costo: $${prod.precio_costo?.toFixed(2) || '0.00'}</small>
+                  <small>Stock: ${prod.unidades_totales} | Costo: $${(parseFloat(prod.precio_costo) || 0).toFixed(2)}</small>
+                  
               </div>
               <div class="d-flex align-items-center gap-2">
-                  <span class="badge bg-success">$${prod.precio_venta?.toFixed(2) || '0.00'}</span>
+                  <span class="badge bg-success">$${(parseFloat(prod.precio_venta) || 0).toFixed(2)}</span>
                   ${'<?= $rol ?>' === 'admin' ? `
                       <button class="btn btn-sm btn-warning" onclick='editarProducto(${JSON.stringify(prod)})'>✏️</button>
                       <button class="btn btn-sm btn-danger" onclick="eliminarProducto(${prod.id})">🗑️</button>
@@ -447,7 +480,112 @@ $rol = $_SESSION['rol'];
       document.getElementById('packIngresoFields').style.display = 'none';
     }
   });
+  //FUNCION PARA ABRIR EL MODAL DE INGRESO
+  function abrirModalEditarIngreso(ingreso) {
+    document.getElementById('id_ingreso').value = ingreso.id;
+    document.getElementById('producto_id_edit').value = ingreso.producto_id;
+    document.getElementById('numero_boleta_edit').value = ingreso.numero_boleta || '';
+    document.getElementById('proveedor_edit').value = ingreso.proveedor || '';
+    document.getElementById('precio_costo_edit').value = ingreso.precio_costo;
+    document.getElementById('cantidad_total_edit').value = ingreso.cantidad_total;
+    document.getElementById('fecha_vencimiento_edit').value = ingreso.fecha_vencimiento || '';
 
+    const modal = new bootstrap.Modal(document.getElementById('modalEditarIngresoStock'));
+    modal.show();
+  }
+
+  //FUNCION PARA MOSTRAR LOS INGRESOS EN EL MODAL DE EDICION
+  function mostrarIngresos(producto_id, descripcion) {
+    const modal = new bootstrap.Modal(document.getElementById('modalVerIngresos'));
+    document.getElementById('nombreProductoIngresos').textContent = descripcion;
+    const tablaBody = document.getElementById('tablaIngresosBody');
+
+    tablaBody.innerHTML = `<tr><td colspan="7" class="text-center text-warning">Cargando...</td></tr>`;
+
+    fetch(`../controllers/ingresos_por_producto.php?id=${producto_id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success || !Array.isArray(data.ingresos)) {
+          tablaBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">No se pudieron obtener los ingresos</td></tr>`;
+          return;
+        }
+
+        if (data.ingresos.length === 0) {
+          tablaBody.innerHTML = `<tr><td colspan="7" class="text-center text-info">Sin ingresos registrados</td></tr>`;
+          return;
+        }
+
+        tablaBody.innerHTML = '';
+        data.ingresos.forEach(ing => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${ing.numero_boleta || '-'}</td>
+            <td>${ing.fecha_ingreso.split(' ')[0]}</td>
+            <td>${ing.cantidad_total}</td>
+            <td>$${parseFloat(ing.precio_costo).toFixed(2)}</td>
+            <td>${ing.proveedor || '-'}</td>
+            <td>${ing.fecha_vencimiento || '-'}</td>
+            <td>
+              <button class="btn btn-sm btn-warning" onclick="editarIngresoStock(${ing.id})">✏️</button>
+              <button class="btn btn-sm btn-danger" onclick="eliminarIngresoStock(${ing.id})">🗑️</button>
+            </td>
+          `;
+          tablaBody.appendChild(row);
+        });
+
+        modal.show();
+      })
+      .catch(err => {
+        console.error(err);
+        tablaBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Error cargando ingresos</td></tr>`;
+      });
+  }
+  //FUNCION PARA EDITAR PRODUCTO STOCK
+  function editarIngresoStock(id) {
+    fetch(`../controllers/get_ingreso_stock.php?id=${id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success || !data.ingreso) {
+          Swal.fire('Error', 'No se pudo obtener el ingreso', 'error');
+          return;
+        }
+
+        abrirModalEditarIngreso(data.ingreso);
+      })
+      .catch(err => {
+        console.error(err);
+        Swal.fire('Error', 'Hubo un problema al cargar el ingreso', 'error');
+      });
+  }
+  //envio al formulario de edicion
+  const formEditarIngresoStock = document.getElementById('formEditarIngresoStock');
+  if (formEditarIngresoStock) {
+    formEditarIngresoStock.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(formEditarIngresoStock);
+
+      fetch('../controllers/editar_ingreso_stock.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          Swal.fire('Actualizado', data.mensaje, 'success');
+          const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarIngresoStock'));
+          if (modal) modal.hide();
+          cargarProductos();
+        } else {
+          Swal.fire('Error', data.mensaje || 'No se pudo actualizar', 'error');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        Swal.fire('Error', 'Error al guardar los cambios', 'error');
+      });
+    });
+  }
 
 
 </script>
